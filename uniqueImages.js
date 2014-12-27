@@ -8,16 +8,43 @@ var path = require('path');
 var mori = require('mori');
 
 /**
+ * Compares the file names of two vectors
+ * @param {mori.vector} vectorA
+ * @param {mori.vector} vectorB
+ * @returns {number}
+ */
+var compareFileNames = function (vectorA, vectorB) {
+    var fileNameA = mori.first(vectorA);
+    var fileNameB = mori.first(vectorB);
+    var result;
+    if (fileNameA < fileNameB) {
+        result = 1;
+    } else if (fileNameA === fileNameB) {
+        result = 0;
+    } else {
+        result = -1;
+    }
+    return result;
+};
+
+/**
  * Compares the perceptible hash of the given vector with every other hash in the array
+ * @param {object} dict
  * @param {mori.vector} currentVector The vector which contains the current hash and file name
  * @param {number} index The current position in the array
  * @param {Array.<mori.vector>} array The array which contains all vectors of file name and perceptible hash
  */
-var compareHashes = function (currentVector, index, array) {
+var compareHashes = function (dict, currentVector, index, array) {
     array.forEach(function (innerCurrentVector, innerIndex) {
         if (index !== innerIndex) {
-            var hammingDistance = blockhash.hammingDistance(mori.last(currentVector), mori.last(innerCurrentVector));
-            console.log(path.basename(mori.first(currentVector)), path.basename(mori.first(innerCurrentVector)), hammingDistance);
+            var vectors = [currentVector, innerCurrentVector].sort(compareFileNames);
+            var key = path.basename(mori.first(vectors[0])) + path.basename(mori.first(vectors[1]));
+            if (!dict[key]) {
+                dict[key] = {
+                    hash: blockhash.hammingDistance(mori.last(currentVector), mori.last(innerCurrentVector)),
+                    vectors: vectors
+                };
+            }
         }
     });
 };
@@ -50,6 +77,8 @@ recursive.readdirr(root, function (err, dirs, files) {
     } else {
         var jpgs = mori.filter(isJPG, files);
         var hashes = mori.map(getPHash, jpgs);
-        mori.into_array(hashes).forEach(compareHashes);
+        var dict = {};
+        mori.into_array(hashes).forEach(mori.partial(compareHashes, dict));
+        console.log(JSON.stringify(dict));
     }
 });
