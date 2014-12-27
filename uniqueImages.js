@@ -8,18 +8,16 @@ var path = require('path');
 var mori = require('mori');
 
 /**
- * Compares the file names of two vectors
- * @param {mori.vector} vectorA
- * @param {mori.vector} vectorB
+ * Compares two strings
+ * @param {string} a
+ * @param {string} b
  * @returns {number}
  */
-var compareFileNames = function (vectorA, vectorB) {
-    var fileNameA = mori.first(vectorA);
-    var fileNameB = mori.first(vectorB);
+var compareStrings = function (a, b) {
     var result;
-    if (fileNameA < fileNameB) {
+    if (a < b) {
         result = 1;
-    } else if (fileNameA === fileNameB) {
+    } else if (a === b) {
         result = 0;
     } else {
         result = -1;
@@ -28,25 +26,39 @@ var compareFileNames = function (vectorA, vectorB) {
 };
 
 /**
- * Compares the perceptible hash of the given vector with every other hash in the array
- * @param {object} dict
- * @param {mori.vector} currentVector The vector which contains the current hash and file name
- * @param {number} index The current position in the array
- * @param {Array.<mori.vector>} array The array which contains all vectors of file name and perceptible hash
+ * Compares the hash value of two vectors
+ * @param {mori.vector} vectorA
+ * @param {mori.vector} vectorB
+ * @returns {number}
  */
-var compareHashes = function (dict, currentVector, index, array) {
-    array.forEach(function (innerCurrentVector, innerIndex) {
-        if (index !== innerIndex) {
-            var vectors = [currentVector, innerCurrentVector].sort(compareFileNames);
-            var key = path.basename(mori.first(vectors[0])) + path.basename(mori.first(vectors[1]));
-            if (!dict[key]) {
-                dict[key] = {
-                    hash: blockhash.hammingDistance(mori.last(currentVector), mori.last(innerCurrentVector)),
-                    vectors: vectors
-                };
+var compareHashes = function (vectorA, vectorB) {
+    var hashA = mori.last(vectorA);
+    var hashB = mori.last(vectorB);
+    return compareStrings(hashA, hashB);
+};
+
+/**
+ * Takes an array of sorted vectors and groups it by their hamming distance
+ * @param {Array.<mori.vector>} vectors
+ * @returns {Array.<Array.<mori.vector>>}
+ */
+var groupByHammingDistance = function (vectors) {
+    var groups = [[]];
+    var groupIndex = 0;
+    vectors.forEach(function (currentVector, index, array) {
+        if (index > 0) {
+            var hash = blockhash.hammingDistance(mori.last(array[index - 1]), mori.last(currentVector));
+            if (hash < 10) {
+                groups[groupIndex].push(currentVector);
+            } else {
+                groups.push([currentVector]);
+                groupIndex++;
             }
+        } else {
+            groups[groupIndex].push(currentVector);
         }
     });
+    return groups;
 };
 
 /**
@@ -77,8 +89,13 @@ recursive.readdirr(root, function (err, dirs, files) {
     } else {
         var jpgs = mori.filter(isJPG, files);
         var hashes = mori.map(getPHash, jpgs);
-        var dict = {};
-        mori.into_array(hashes).forEach(mori.partial(compareHashes, dict));
-        console.log(JSON.stringify(dict));
+        var sortedVectors = mori.into_array(hashes).sort(compareHashes);
+        var grouped = groupByHammingDistance(sortedVectors);
+        var groups = grouped.map(function (group) {
+            return group.map(function (vector) {
+                return path.basename(mori.first(vector));
+            });
+        });
+        console.log(JSON.stringify(groups));
     }
 });
