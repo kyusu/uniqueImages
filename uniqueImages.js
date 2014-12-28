@@ -91,7 +91,9 @@ recursive.readdirr(root, function (err, dirs, files) {
         var hashes = mori.map(getPHash, jpgs);
         var sortedVectors = mori.into_array(hashes).sort(compareHashes);
         var grouped = groupByHammingDistance(sortedVectors);
-        var groups = grouped.map(function (group) {
+        var groups = (grouped.filter(function (group) {
+            return group.length > 1;
+        })).map(function (group) {
             return group.map(function (vector) {
                 return path.basename(mori.first(vector));
             });
