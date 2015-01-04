@@ -5,9 +5,9 @@ var fs = require('fs');
 var jpeg = require('jpeg-js');
 
 /**
- * Calculates the perceptible hash of the given file
+ * Calculates the perceptual hash of the given file
  * @param fileName
- * @returns {Array.<string>} A "tuple" where the first entry is the file name and the second the perceptible hash
+ * @returns {Array.<string>} A "tuple" where the first entry is the file name and the second the perceptual hash
  */
 var getPHash = function (fileName) {
     var data = fs.readFileSync(fileName);
