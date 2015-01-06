@@ -1,14 +1,12 @@
 'use strict';
 
-var blockhash = require('blockhash');
+var blockHash = require('blockhash');
 var recursive = require('recursive-fs');
 var path = require('path');
 var Thread = require('child-manager');
 var os = require('os');
 var q = require('q');
 var beautify = require('js-beautify').js_beautify;
-
-var cpus = os.cpus();
 
 /**
  * Handles the output of a thread object. Parses the output and resolves the promise associated with the given thread
@@ -61,8 +59,18 @@ var compareHashes = function (tupleA, tupleB) {
  * @returns {boolean}
  */
 var hammingDistanceSmallEnough = function (hash1, hash2) {
-    var distance = blockhash.hammingDistance(hash1, hash2);
+    var distance = blockHash.hammingDistance(hash1, hash2);
     return distance < 10;
+};
+
+/**
+ * Determines whether the two given hashes are equal
+ * @param {string} hash1
+ * @param {string} hash2
+ * @returns {boolean}
+ */
+var areEqual = function (hash1, hash2) {
+    return hash1 === hash2;
 };
 
 /**
@@ -116,37 +124,13 @@ var splitUpIntoChunks = function (array, chunks) {
     return splitUp;
 };
 
-var handleMd5PromisesResolved = function (md5Obj, array) {
-    md5Obj.thread.close();
-    var hashes = [].concat.apply([], array);
-    var sortedTuples = hashes.sort(compareHashes);
-    var grouped = groupBySimilarity(function (hash1, hash2) {
-        return hash1 === hash2;
-    }, sortedTuples);
-    var groups = grouped.map(function (group) {
-        return group.map(function (tuple) {
-            return tuple[0];
-        }).sort();
-    });
-    console.log('Duplicates:', beautify(JSON.stringify(groups.filter(function (group) {
-        return group.length > 1;
-    }).map(function (group) {
-        return group.map(function (file) {
-            return path.basename(file);
-        });
-    }))));
-    calculateHashes(groups.map(function (group) {
-        return group[0];
-    }), pHash);
-};
-
 /**
- *
+ * Calculates the hashes for the given jpgs and spreads the workload to the given thread object
  * @param {Array.<string>} jpgs
  * @param {{thread: Thread, deferred: Array, promises: Array, deferred: Array, handleResolved: function}} hashObj
  */
 var calculateHashes = function (jpgs, hashObj) {
-    var splitJpgs = splitUpIntoChunks(jpgs, cpus.length);
+    var splitJpgs = splitUpIntoChunks(jpgs, os.cpus().length);
     splitJpgs.forEach(function (value, index) {
         var deferred = q.defer();
         hashObj.thread.execute(JSON.stringify({index: index, jpgs: value}));
@@ -157,6 +141,56 @@ var calculateHashes = function (jpgs, hashObj) {
 };
 
 /**
+ * Sorts and groups the given array
+ * @param {Function} groupingPredicate The predicate function which is used to group the entries
+ * @param {Array.<Array.<string>>} array An array which holds "tuples" of file name/path and hash
+ * @returns {Array.<Array.<string>>}
+ */
+var getGroupedTuples = function (groupingPredicate, array) {
+    var hashes = [].concat.apply([], array);
+    var sortedTuples = hashes.sort(compareHashes);
+    var grouped = groupBySimilarity(groupingPredicate, sortedTuples);
+    return grouped;
+};
+
+/**
+ * Filters the given array and returns the file names of groups with more then one entry
+ * @param {Function} getFileName The function which is used to get the file name
+ * @param {Array.<Array>} groups The grouped entries which are either "tuples" or just file names/paths
+ * @returns {Array.<string>}
+ */
+var getGroupsWithMultipleEntries = function (getFileName, groups) {
+    return groups.filter(function (group) {
+        return group.length > 1;
+    }).map(function (group) {
+        return group.map(getFileName).sort();
+    });
+};
+
+/**
+ * Handles t
+ * @param {{thread: Thread, pHash: {}}} md5Obj
+ * @param array
+ */
+var handleMd5PromisesResolved = function (md5Obj, array) {
+    md5Obj.thread.close();
+    var grouped = getGroupedTuples(areEqual, array);
+    var groups = grouped.map(function (group) {
+        return group.map(function (tuple) {
+            return tuple[0];
+        }).sort();
+    });
+    var getFileName = function (file) {
+        return path.basename(file);
+    };
+    var duplicates = getGroupsWithMultipleEntries(getFileName, groups);
+    console.log('Duplicates:', beautify(JSON.stringify(duplicates)));
+    calculateHashes(groups.map(function (group) {
+        return group[0];
+    }), md5Obj.pHash);
+};
+
+/**
  * Handles the case that all promises are resolved. Sorts the tuple of hashes and file names and groups them by hamming
  * distance
  * @param {{}} pHashObj
@@ -164,17 +198,12 @@ var calculateHashes = function (jpgs, hashObj) {
  */
 var handlePHashPromisesResolved = function (pHashObj, array) {
     pHashObj.thread.close();
-    var hashes = [].concat.apply([], array);
-    var sortedTuples = hashes.sort(compareHashes);
-    var grouped = groupBySimilarity(hammingDistanceSmallEnough, sortedTuples);
-    var groups = (grouped.filter(function (group) {
-        return group.length > 1;
-    })).map(function (group) {
-            return group.map(function (tuple) {
-                return path.basename(tuple[0]);
-            }).sort();
-        });
-    console.log('Potential duplicates:', beautify(JSON.stringify(groups)));
+    var grouped = getGroupedTuples(hammingDistanceSmallEnough, array);
+    var getFileName = function (tuple) {
+        return path.basename(tuple[0]);
+    };
+    var potentialDuplicates = getGroupsWithMultipleEntries(getFileName, grouped);
+    console.log('Potential duplicates:', beautify(JSON.stringify(potentialDuplicates)));
     console.timeEnd('Hashing');
 };
 
@@ -188,20 +217,19 @@ var handleReadDirectory = function (error, dirs, files) {
         console.log(error);
     } else {
         console.time('Hashing');
-        var jpgs = files.filter(isJPG, files);
-        calculateHashes(jpgs, md5);
+
+        var md5 = {
+            promises: [], deferreds: [], handleResolved: handleMd5PromisesResolved, pHash: {
+                promises: [], deferreds: [], handleResolved: handlePHashPromisesResolved
+            }
+        };
+
+        md5.thread = new Thread('./md5Worker.js', handleThreadOutput.bind(undefined, md5.deferreds), os.cpus().length);
+        md5.pHash.thread = new Thread('./pHashWorker.js', handleThreadOutput.bind(undefined, md5.pHash.deferreds), os.cpus().length);
+
+        calculateHashes(files.filter(isJPG, files), md5);
     }
 };
-
-var md5 = {
-    promises: [], deferreds: [], handleResolved: handleMd5PromisesResolved
-};
-md5.thread = new Thread('./md5Worker.js', handleThreadOutput.bind(undefined, md5.deferreds), cpus.length);
-
-var pHash = {
-    promises: [], deferreds: [], handleResolved: handlePHashPromisesResolved
-};
-pHash.thread = new Thread('./pHashWorker.js', handleThreadOutput.bind(undefined, pHash.deferreds), cpus.length);
 
 var rootDir = path.resolve(process.argv[2]);
 recursive.readdirr(rootDir, handleReadDirectory);
