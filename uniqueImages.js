@@ -6,19 +6,22 @@ var path = require('path');
 var Thread = require('child-manager');
 var os = require('os');
 var q = require('q');
+var beautify = require('js-beautify').js_beautify;
 
 var cpus = os.cpus();
-var promises = [];
-var deferreds = [];
 
 /**
- * Handles the output of the thread object. Parses the output and resolves the promise associated with the given thread
+ * Handles the output of a thread object. Parses the output and resolves the promise associated with the given thread
+ * @param {Array.<q>} deferreds
  * @param {string} out The JSON encoded output of the thread. An object of the form
  * {index: number, hashes: Array.<Array.<strings>>}
  */
-var handleThreadOutput = function (out) {
+var handleThreadOutput = function (deferreds, out) {
     var result = JSON.parse(out);
-    deferreds[result.index].resolve(result.hashes);
+    var promise = deferreds[result.index];
+    if (promise) {
+        promise.resolve(result.hashes);
+    }
 };
 
 /**
@@ -52,17 +55,30 @@ var compareHashes = function (tupleA, tupleB) {
 };
 
 /**
- * Takes an array of sorted "tuples" and groups it by their hamming distance
+ * Checks if the hamming distance of the two given hashes is a below a threshold
+ * @param {string} hash1
+ * @param {string} hash2
+ * @returns {boolean}
+ */
+var hammingDistanceSmallEnough = function (hash1, hash2) {
+    var distance = blockhash.hammingDistance(hash1, hash2);
+    return distance < 10;
+};
+
+/**
+ * Takes an array of sorted "tuples" and groups them by similarity
+ * @param {function} predicate A function which acts as a predicate whether two hashes can be considered similar enough
+ * to be grouped together
  * @param {Array.<Array.<string>>} tuples
  * @returns {Array.<Array.<string>>}
  */
-var groupByHammingDistance = function (tuples) {
+var groupBySimilarity = function (predicate, tuples) {
     var groups = [[]];
     var groupIndex = 0;
     tuples.forEach(function (currentVector, index, array) {
         if (index > 0) {
-            var hash = blockhash.hammingDistance(array[index - 1][1], currentVector[1]);
-            if (hash < 10) {
+            var similarEnough = predicate(array[index - 1][1], currentVector[1]);
+            if (similarEnough) {
                 groups[groupIndex].push(currentVector);
             } else {
                 groups.push([currentVector]);
@@ -100,24 +116,65 @@ var splitUpIntoChunks = function (array, chunks) {
     return splitUp;
 };
 
+var handleMd5PromisesResolved = function (md5Obj, array) {
+    md5Obj.thread.close();
+    var hashes = [].concat.apply([], array);
+    var sortedTuples = hashes.sort(compareHashes);
+    var grouped = groupBySimilarity(function (hash1, hash2) {
+        return hash1 === hash2;
+    }, sortedTuples);
+    var groups = grouped.map(function (group) {
+        return group.map(function (tuple) {
+            return tuple[0];
+        }).sort();
+    });
+    console.log('Duplicates:', beautify(JSON.stringify(groups.filter(function (group) {
+        return group.length > 1;
+    }).map(function (group) {
+        return group.map(function (file) {
+            return path.basename(file);
+        });
+    }))));
+    calculateHashes(groups.map(function (group) {
+        return group[0];
+    }), pHash);
+};
+
+/**
+ *
+ * @param {Array.<string>} jpgs
+ * @param {{thread: Thread, deferred: Array, promises: Array, deferred: Array, handleResolved: function}} hashObj
+ */
+var calculateHashes = function (jpgs, hashObj) {
+    var splitJpgs = splitUpIntoChunks(jpgs, cpus.length);
+    splitJpgs.forEach(function (value, index) {
+        var deferred = q.defer();
+        hashObj.thread.execute(JSON.stringify({index: index, jpgs: value}));
+        hashObj.deferreds.push(deferred);
+        hashObj.promises.push(deferred.promise);
+    });
+    q.all(hashObj.promises).then(hashObj.handleResolved.bind(undefined, hashObj)).done();
+};
+
 /**
  * Handles the case that all promises are resolved. Sorts the tuple of hashes and file names and groups them by hamming
  * distance
+ * @param {{}} pHashObj
  * @param {Array.<Array.<string>>} array
  */
-var handleResolvedPromises = function (array) {
-    thread.close();
+var handlePHashPromisesResolved = function (pHashObj, array) {
+    pHashObj.thread.close();
     var hashes = [].concat.apply([], array);
     var sortedTuples = hashes.sort(compareHashes);
-    var grouped = groupByHammingDistance(sortedTuples);
+    var grouped = groupBySimilarity(hammingDistanceSmallEnough, sortedTuples);
     var groups = (grouped.filter(function (group) {
         return group.length > 1;
     })).map(function (group) {
             return group.map(function (tuple) {
                 return path.basename(tuple[0]);
-            });
+            }).sort();
         });
-    console.log(JSON.stringify(groups));
+    console.log('Potential duplicates:', beautify(JSON.stringify(groups)));
     console.timeEnd('Hashing');
 };
 
@@ -132,18 +189,19 @@ var handleReadDirectory = function (error, dirs, files) {
     } else {
         console.time('Hashing');
         var jpgs = files.filter(isJPG, files);
-        var splitJpgs = splitUpIntoChunks(jpgs, cpus.length);
-        splitJpgs.forEach(function (value, index) {
-            var deferred = q.defer();
-            console.log(index);
-            thread.execute(JSON.stringify({index: index, jpgs: value}));
-            deferreds.push(deferred);
-            promises.push(deferred.promise);
-        });
-        q.all(promises).then(handleResolvedPromises).done();
+        calculateHashes(jpgs, md5);
     }
 };
 
-var root = path.resolve(process.argv[2]);
-var thread = new Thread('./worker.js', handleThreadOutput, cpus.length);
-recursive.readdirr(root, handleReadDirectory);
+var md5 = {
+    promises: [], deferreds: [], handleResolved: handleMd5PromisesResolved
+};
+md5.thread = new Thread('./md5Worker.js', handleThreadOutput.bind(undefined, md5.deferreds), cpus.length);
+
+var pHash = {
+    promises: [], deferreds: [], handleResolved: handlePHashPromisesResolved
+};
+pHash.thread = new Thread('./pHashWorker.js', handleThreadOutput.bind(undefined, pHash.deferreds), cpus.length);
+
+var rootDir = path.resolve(process.argv[2]);
+recursive.readdirr(rootDir, handleReadDirectory);
