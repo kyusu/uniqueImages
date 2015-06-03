@@ -149,8 +149,7 @@ var calculateHashes = function (jpgs, hashObj) {
 var getGroupedTuples = function (groupingPredicate, array) {
     var hashes = [].concat.apply([], array);
     var sortedTuples = hashes.sort(compareHashes);
-    var grouped = groupBySimilarity(groupingPredicate, sortedTuples);
-    return grouped;
+    return groupBySimilarity(groupingPredicate, sortedTuples);
 };
 
 /**
