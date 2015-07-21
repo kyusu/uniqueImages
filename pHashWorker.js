@@ -7,12 +7,24 @@ var jpeg = require('jpeg-js');
 /**
  * Calculates the perceptual hash of the given image
  * @param {string} fileName
- * @returns {Array.<string>} A "tuple" where the first entry is the image path/name and the second the perceptual hash
+ * @returns {Array.<string>} A "tuple" where the first entry is the image path/name, the second the perceptual hash
+ * and the third entry holds any error which has occurred;
  */
 var getPHash = function (fileName) {
+    var error = '';
     var data = fs.readFileSync(fileName);
-    var hash = blockhash.blockhashData(jpeg.decode(data), 16, 2);
-    return [fileName, hash];
+    var jpg;
+    var hash = '';
+    try {
+        jpg =jpeg.decode(data);
+    } catch(e) {
+        console.log('File', fileName, 'caused an error!');
+        error = e;
+    }
+    if (jpg) {
+        hash = blockhash.blockhashData(jpg, 16, 2);
+    }
+    return [fileName, hash, error];
 };
 
 /**
