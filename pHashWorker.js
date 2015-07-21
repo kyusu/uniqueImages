@@ -11,6 +11,7 @@ var jpeg = require('jpeg-js');
  * and the third entry holds any error which has occurred;
  */
 var getPHash = function (fileName) {
+    console.log('Processing', fileName);
     var error = '';
     var data = fs.readFileSync(fileName);
     var jpg;
