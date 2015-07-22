@@ -7,6 +7,7 @@ var Thread = require('child-manager');
 var os = require('os');
 var q = require('q');
 var beautify = require('js-beautify').js_beautify;
+var _ = require('lodash');
 
 /**
  * Handles the output of a thread object. Parses the output and resolves the promise associated with the given thread
@@ -153,6 +154,22 @@ var getGroupedTuples = function (groupingPredicate, array) {
 };
 
 /**
+ * Filters out all "tuples" containing an error message and maps them to error description objects
+ * @param {Array.<Array.<string>>} array An array which holds "tuples" of file name/path, hash and error
+ * @returns {Array.<{error: string, fileName: string}>}
+ */
+var getErrors = function (array) {
+    return array.filter(function (tuple) {
+        return tuple[2];
+    }).map(function (tuple) {
+        return {
+            error: tuple[2],
+            fileName: path.basename(tuple[0])
+        };
+    });
+};
+
+/**
  * Filters the given array and returns the file names of groups with more then one entry
  * @param {Function} getFileName The function which is used to get the file name
  * @param {Array.<Array>} groups The grouped entries which are either "tuples" or just file names/paths
@@ -204,6 +221,10 @@ var handlePHashPromisesResolved = function (pHashObj, array) {
     var potentialDuplicates = getGroupsWithMultipleEntries(getFileName, grouped);
     console.log('Potential duplicates:', beautify(JSON.stringify(potentialDuplicates)));
     console.timeEnd('Hashing');
+    var errors = getErrors(_.flatten(array));
+    if (errors.length) {
+        console.log('Files which have caused errors', beautify(JSON.stringify(errors)));
+    }
 };
 
 /**
