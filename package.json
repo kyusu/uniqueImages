@@ -3,13 +3,14 @@
   "version": "0.0.1",
   "dependencies": {
     "blockhash": "^0.2.0",
-    "jpeg-js": "^0.1.1",
-    "recursive-fs": "^0.1.4",
     "child-manager": "^0.1.2",
-    "q": "^1.1.2",
-    "md5-file": "^1.1.10",
+    "express": "^4.13.4",
+    "jpeg-js": "^0.1.1",
     "js-beautify": "^1.5.4",
-    "lodash": "^3.10.0"
+    "lodash": "^3.10.0",
+    "md5-file": "^1.1.10",
+    "q": "^1.1.2",
+    "recursive-fs": "^0.1.4"
   },
   "description": "Calculates the perceptual image hash of all JPG images in the given directory based on algorithm described in Block Mean Value",
   "author": "kyusu",

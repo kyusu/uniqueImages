@@ -1,0 +1,20 @@
+<h3>Duplicates</h3>
+<ul>
+    {{#each duplicates}}
+        <li>
+            {{#each this}}
+                <img class="dup" src="/img{{this}}">
+            {{/each}}
+        </li>
+    {{/each}}
+</ul>
+<h3>Potential Duplicates</h3>
+<ul>
+    {{#each potentialDuplicates}}
+        <li>
+            {{#each this}}
+                <img class="dup" src="/img{{this}}">
+            {{/each}}
+        </li>
+    {{/each}}
+</ul>
