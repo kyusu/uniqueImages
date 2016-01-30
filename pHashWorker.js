@@ -1,8 +1,8 @@
 'use strict';
 
-var blockhash = require('blockhash');
-var fs = require('fs');
-var jpeg = require('jpeg-js');
+const blockhash = require('blockhash');
+const fs = require('fs');
+const jpeg = require('jpeg-js');
 
 /**
  * Calculates the perceptual hash of the given image
@@ -10,10 +10,10 @@ var jpeg = require('jpeg-js');
  * @returns {Array.<string>} A "tuple" where the first entry is the image path/name, the second the perceptual hash
  * and the third entry holds any error which has occurred;
  */
-var getPHash = function (fileName) {
+const getPHash = (fileName) => {
     console.log('Processing', fileName);
     var error = '';
-    var data = fs.readFileSync(fileName);
+    const data = fs.readFileSync(fileName);
     var jpg;
     var hash = '';
     try {
@@ -33,9 +33,9 @@ var getPHash = function (fileName) {
  * @param {string} params The JSON encoded payload for the process, in the form of {jgps: Array.<string>}, where
  * each entries in jpgs represents an image
  */
-var handleMessage = function (params) {
-    var data = JSON.parse(params);
-    var hashes = data.jpgs.map(getPHash);
+const handleMessage = (params) => {
+    const data = JSON.parse(params);
+    const hashes = data.jpgs.map(getPHash);
     process.send(JSON.stringify({hashes: hashes, index: data.index}));
 };
 

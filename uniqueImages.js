@@ -1,13 +1,15 @@
 'use strict';
 
-var blockHash = require('blockhash');
-var recursive = require('recursive-fs');
-var path = require('path');
-var Thread = require('child-manager');
-var os = require('os');
-var q = require('q');
-var beautify = require('js-beautify').js_beautify;
-var _ = require('lodash');
+const blockHash = require('blockhash');
+const recursive = require('recursive-fs');
+const path = require('path');
+const Thread = require('child-manager');
+const os = require('os');
+const q = require('q');
+const _ = require('lodash');
+
+var results = {};
+const resultDeferred = q.defer();
 
 /**
  * Handles the output of a thread object. Parses the output and resolves the promise associated with the given thread
@@ -15,8 +17,8 @@ var _ = require('lodash');
  * @param {string} out The JSON encoded output of the thread. An object of the form
  * {index: number, hashes: Array.<Array.<strings>>}
  */
-var handleThreadOutput = function (deferreds, out) {
-    var result = JSON.parse(out);
+const handleThreadOutput = (deferreds, out) => {
+    const result = JSON.parse(out);
     var promise = deferreds[result.index];
     if (promise) {
         promise.resolve(result.hashes);
@@ -29,7 +31,7 @@ var handleThreadOutput = function (deferreds, out) {
  * @param {string} b
  * @returns {number}
  */
-var compareStrings = function (a, b) {
+const compareStrings = (a, b) => {
     var result;
     if (a < b) {
         result = 1;
@@ -47,9 +49,9 @@ var compareStrings = function (a, b) {
  * @param {Array.<string>} tupleB
  * @returns {number}
  */
-var compareHashes = function (tupleA, tupleB) {
-    var hashA = tupleA[1];
-    var hashB = tupleB[1];
+const compareHashes = (tupleA, tupleB) => {
+    const hashA = tupleA[1];
+    const hashB = tupleB[1];
     return compareStrings(hashA, hashB);
 };
 
@@ -59,8 +61,8 @@ var compareHashes = function (tupleA, tupleB) {
  * @param {string} hash2
  * @returns {boolean}
  */
-var hammingDistanceSmallEnough = function (hash1, hash2) {
-    var distance = blockHash.hammingDistance(hash1, hash2);
+const hammingDistanceSmallEnough = (hash1, hash2) => {
+    const distance = blockHash.hammingDistance(hash1, hash2);
     return distance < 10;
 };
 
@@ -70,7 +72,7 @@ var hammingDistanceSmallEnough = function (hash1, hash2) {
  * @param {string} hash2
  * @returns {boolean}
  */
-var areEqual = function (hash1, hash2) {
+const areEqual = (hash1, hash2) => {
     return hash1 === hash2;
 };
 
@@ -81,10 +83,10 @@ var areEqual = function (hash1, hash2) {
  * @param {Array.<Array.<string>>} tuples
  * @returns {Array.<Array.<string>>}
  */
-var groupBySimilarity = function (predicate, tuples) {
+const groupBySimilarity = (predicate, tuples) => {
     var groups = [[]];
     var groupIndex = 0;
-    tuples.forEach(function (currentVector, index, array) {
+    tuples.forEach((currentVector, index, array) => {
         if (index > 0) {
             var similarEnough = predicate(array[index - 1][1], currentVector[1]);
             if (similarEnough) {
@@ -105,7 +107,7 @@ var groupBySimilarity = function (predicate, tuples) {
  * @param {string} fileName
  * @returns {boolean}
  */
-var isJPG = function (fileName) {
+const isJPG = (fileName) => {
     return path.extname(fileName) === '.jpg';
 };
 
@@ -115,8 +117,8 @@ var isJPG = function (fileName) {
  * @param chunks
  * @returns {Array.<Array.<*>>}
  */
-var splitUpIntoChunks = function (array, chunks) {
-    var size = Math.ceil(array.length / chunks);
+const splitUpIntoChunks = (array, chunks) => {
+    const size = Math.ceil(array.length / chunks);
     var splitUp = [];
     for (var i = 0; i < array.length; i += size) {
         splitUp.push(array.slice(i, i + size));
@@ -130,9 +132,9 @@ var splitUpIntoChunks = function (array, chunks) {
  * @param {Array.<string>} jpgs
  * @param {{thread: Thread, deferred: Array, promises: Array, deferred: Array, handleResolved: function}} hashObj
  */
-var calculateHashes = function (jpgs, hashObj) {
-    var splitJpgs = splitUpIntoChunks(jpgs, os.cpus().length);
-    splitJpgs.forEach(function (value, index) {
+const calculateHashes = (jpgs, hashObj) => {
+    const splitJpgs = splitUpIntoChunks(jpgs, os.cpus().length);
+    splitJpgs.forEach((value, index) => {
         var deferred = q.defer();
         hashObj.thread.execute(JSON.stringify({index: index, jpgs: value}));
         hashObj.deferreds.push(deferred);
@@ -147,9 +149,9 @@ var calculateHashes = function (jpgs, hashObj) {
  * @param {Array.<Array.<string>>} array An array which holds "tuples" of file name/path and hash
  * @returns {Array.<Array.<string>>}
  */
-var getGroupedTuples = function (groupingPredicate, array) {
-    var hashes = [].concat.apply([], array);
-    var sortedTuples = hashes.sort(compareHashes);
+const getGroupedTuples = (groupingPredicate, array) => {
+    const hashes = [].concat.apply([], array);
+    const sortedTuples = hashes.sort(compareHashes);
     return groupBySimilarity(groupingPredicate, sortedTuples);
 };
 
@@ -158,29 +160,20 @@ var getGroupedTuples = function (groupingPredicate, array) {
  * @param {Array.<Array.<string>>} array An array which holds "tuples" of file name/path, hash and error
  * @returns {Array.<{error: string, fileName: string}>}
  */
-var getErrors = function (array) {
-    return array.filter(function (tuple) {
-        return tuple[2];
-    }).map(function (tuple) {
-        return {
-            error: tuple[2],
-            fileName: path.basename(tuple[0])
-        };
+const getErrors = (array) => {
+    return array.filter(tuple =>  tuple[2]).map(tuple => {
+        return {error: tuple[2], fileName: path.basename(tuple[0])};
     });
 };
 
 /**
  * Filters the given array and returns the file names of groups with more then one entry
- * @param {Function} getFileName The function which is used to get the file name
+ * @param {Function} mapFunc The function which is used to get the file
  * @param {Array.<Array>} groups The grouped entries which are either "tuples" or just file names/paths
  * @returns {Array.<string>}
  */
-var getGroupsWithMultipleEntries = function (getFileName, groups) {
-    return groups.filter(function (group) {
-        return group.length > 1;
-    }).map(function (group) {
-        return group.map(getFileName).sort();
-    });
+const getGroupsWithMultipleEntries = (mapFunc, groups) => {
+    return groups.filter(group => group.length > 1).map(group => group.map(mapFunc).sort());
 };
 
 /**
@@ -188,22 +181,12 @@ var getGroupsWithMultipleEntries = function (getFileName, groups) {
  * @param {{thread: Thread, pHash: {}}} md5Obj
  * @param array
  */
-var handleMd5PromisesResolved = function (md5Obj, array) {
+const handleMd5PromisesResolved = (md5Obj, array) => {
     md5Obj.thread.close();
-    var grouped = getGroupedTuples(areEqual, array);
-    var groups = grouped.map(function (group) {
-        return group.map(function (tuple) {
-            return tuple[0];
-        }).sort();
-    });
-    var getFileName = function (file) {
-        return path.basename(file);
-    };
-    var duplicates = getGroupsWithMultipleEntries(getFileName, groups);
-    console.log('Duplicates:', beautify(JSON.stringify(duplicates)));
-    calculateHashes(groups.map(function (group) {
-        return group[0];
-    }), md5Obj.pHash);
+    const grouped = getGroupedTuples(areEqual, array);
+    const groups = grouped.map(group => group.map(tuple =>tuple[0]).sort());
+    results.duplicates = getGroupsWithMultipleEntries(file => file, groups);
+    calculateHashes(groups.map(group => group[0]), md5Obj.pHash);
 };
 
 /**
@@ -212,19 +195,16 @@ var handleMd5PromisesResolved = function (md5Obj, array) {
  * @param {{}} pHashObj
  * @param {Array.<Array.<string>>} array
  */
-var handlePHashPromisesResolved = function (pHashObj, array) {
+const handlePHashPromisesResolved = (pHashObj, array) => {
     pHashObj.thread.close();
-    var grouped = getGroupedTuples(hammingDistanceSmallEnough, array);
-    var getFileName = function (tuple) {
-        return path.basename(tuple[0]);
-    };
-    var potentialDuplicates = getGroupsWithMultipleEntries(getFileName, grouped);
-    console.log('Potential duplicates:', beautify(JSON.stringify(potentialDuplicates)));
+    const grouped = getGroupedTuples(hammingDistanceSmallEnough, array);
+    results.potentialDuplicates = getGroupsWithMultipleEntries(tuple => tuple[0], grouped);
     console.timeEnd('Hashing');
-    var errors = getErrors(_.flatten(array));
+    const errors = getErrors(_.flatten(array));
     if (errors.length) {
-        console.log('Files which have caused errors', beautify(JSON.stringify(errors)));
+        results.brokenFiles = errors;
     }
+    resultDeferred.resolve(results);
 };
 
 /**
@@ -232,13 +212,13 @@ var handlePHashPromisesResolved = function (pHashObj, array) {
  * @param {Array.<string>} dirs
  * @param {Array.<string>} files
  */
-var handleReadDirectory = function (error, dirs, files) {
+const handleReadDirectory =  (error, dirs, files) => {
     if (error) {
         console.log(error);
     } else {
         console.time('Hashing');
 
-        var md5 = {
+        const md5 = {
             promises: [], deferreds: [], handleResolved: handleMd5PromisesResolved, pHash: {
                 promises: [], deferreds: [], handleResolved: handlePHashPromisesResolved
             }
@@ -251,5 +231,9 @@ var handleReadDirectory = function (error, dirs, files) {
     }
 };
 
-var rootDir = path.resolve(process.argv[2]);
-recursive.readdirr(rootDir, handleReadDirectory);
+exports.findDuplicates = (dirName) => {
+    const rootDir = path.resolve(dirName);
+    recursive.readdirr(rootDir, handleReadDirectory);
+    return resultDeferred.promise;
+};
+

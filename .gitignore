@@ -32,3 +32,5 @@ node_modules
 
 # Test files
 testFiles
+
+.DS_Store
