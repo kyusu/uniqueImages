@@ -5,7 +5,7 @@ const router = express.Router();
 const path = require('path');
 
 router.get(/\/img\/.*/, function (req, res, next) {
-    var file = req.url.replace('/img', '');
+    var file = decodeURI(req.url).replace('/img', '');
     console.log(file);
     res.sendFile(file);
 });

@@ -1,20 +1,24 @@
-<h3>Duplicates</h3>
-<ul>
-    {{#each duplicates}}
-        <li>
-            {{#each this}}
-                <img class="dup" src="/img{{this}}">
-            {{/each}}
-        </li>
-    {{/each}}
-</ul>
-<h3>Potential Duplicates</h3>
-<ul>
-    {{#each potentialDuplicates}}
-        <li>
-            {{#each this}}
-                <img class="dup" src="/img{{this}}">
-            {{/each}}
-        </li>
-    {{/each}}
-</ul>
+{{#if duplicates}}
+    <h3>Duplicates</h3>
+    <ul>
+        {{#each duplicates}}
+            <li>
+                {{#each this}}
+                    <a target="_blank" href="/img{{this}}"><img class="dup" src="/img{{this}}"></a>
+                {{/each}}
+            </li>
+        {{/each}}
+    </ul>
+{{/if}}
+{{#if potentialDuplicates}}
+    <h3>Potential Duplicates</h3>
+    <ul>
+        {{#each potentialDuplicates}}
+            <li>
+                {{#each this}}
+                    <a target="_blank" href="/img{{this}}"><img class="dup" src="/img{{this}}"></a>
+                {{/each}}
+            </li>
+        {{/each}}
+    </ul>
+{{/if}}
