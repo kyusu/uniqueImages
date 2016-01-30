@@ -19,7 +19,7 @@ Usage:
 -----
 
 ```
-  $ node uniqueImages.js ~/Pictures/Mongolia 2012
+  $ node uniqueImages.js ~/Pictures/Mongolia\ 2012
 ```
 
 License
