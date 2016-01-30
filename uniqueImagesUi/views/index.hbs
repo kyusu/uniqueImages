@@ -4,7 +4,18 @@
         {{#each duplicates}}
             <li>
                 {{#each this}}
-                    <a target="_blank" href="/img{{this}}"><img class="dup" src="/img{{this}}"></a>
+                    <div class="wrapper">
+                        <div>{{this.fileName}}</div>
+                        <div>w: {{this.metaData.width}}, h: {{this.metaData.height}}</div>
+                        <div>
+                            <a target="_blank" href="/img{{this.file}}">
+                                <img class="dup" src="/img{{this.file}}">
+                            </a>
+                        </div>
+                        <div>
+                            <button data-id="/img{{this.file}}">delete</button>
+                        </div>
+                    </div>
                 {{/each}}
             </li>
         {{/each}}
@@ -16,7 +27,18 @@
         {{#each potentialDuplicates}}
             <li>
                 {{#each this}}
-                    <a target="_blank" href="/img{{this}}"><img class="dup" src="/img{{this}}"></a>
+                    <div class="wrapper">
+                        <div>{{this.fileName}}</div>
+                        <div>w: {{this.metaData.width}}, h: {{this.metaData.height}}</div>
+                        <div>
+                            <a target="_blank" href="/img{{this.file}}">
+                                <img class="dup" src="/img{{this.file}}">
+                            </a>
+                        </div>
+                        <div>
+                            <button data-id="/img{{this.file}}">delete</button>
+                        </div>
+                    </div>
                 {{/each}}
             </li>
         {{/each}}
