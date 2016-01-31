@@ -236,4 +236,3 @@ exports.findDuplicates = (dirName) => {
     recursive.readdirr(rootDir, handleReadDirectory);
     return resultDeferred.promise;
 };
-
