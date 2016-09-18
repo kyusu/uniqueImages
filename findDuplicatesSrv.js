@@ -6,14 +6,13 @@ const path = require('path');
 const sizeOf = require('image-size');
 const readChunk = require('read-chunk');
 const imageType = require('image-type');
-const beautify = require('js-beautify').js_beautify;
 
 const getMetaData = (file) => {
     try {
         var metaData;
         const buffer = readChunk.sync(file, 0, 12);
         const type = imageType(buffer);
-        if (type.mime === 'image/jpeg') {
+        if (type && type.mime === 'image/jpeg') {
             const dimensions = sizeOf(file);
             return {
                 width: dimensions.width,
