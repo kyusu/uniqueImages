@@ -1,7 +1,7 @@
 uniqueImages
 ============
 
-![State of the dependencies](https://david-dm.org/kyusu/uniqueImages.svg)
+[![dependencies Status](https://david-dm.org/kyusu/uniqueImages/status.svg)](https://david-dm.org/kyusu/uniqueImages)
 
 A node command line tool which can be used to find duplicate images in a directory even if the images differ in
 resolution, contrast, brightness or color. It currently fails at cropped and mirrored images and works only with JPGs.
