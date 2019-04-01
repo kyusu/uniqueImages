@@ -3,6 +3,8 @@ uniqueImages
 
 [![dependencies Status](https://david-dm.org/kyusu/uniqueImages/status.svg)](https://david-dm.org/kyusu/uniqueImages)
 [![Maintainability](https://api.codeclimate.com/v1/badges/a136817bd50bf9e58a57/maintainability)](https://codeclimate.com/github/kyusu/uniqueImages/maintainability)
+[![Known Vulnerabilities](https://snyk.io/test/github/kyusu/uniqueImages/badge.svg?targetFile=package.json)](https://snyk.io/test/github/kyusu/uniqueImages?targetFile=package.json)
+
 
 A node command line tool which can be used to find duplicate images in a directory even if the images differ in
 resolution, contrast, brightness or color. It currently fails at cropped and mirrored images and works only with JPGs.
