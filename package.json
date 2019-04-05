@@ -13,6 +13,7 @@
     "md5-file": "^1.1.10",
     "png-js": "^0.1.1",
     "q": "^1.1.2",
+    "ramda": "^0.26.1",
     "read-chunk": "^1.0.1",
     "recursive-fs": "^0.1.4",
     "to-arraybuffer": "^1.0.1"
@@ -23,7 +24,11 @@
     "type": "git",
     "url": "https://github.com/kyusu/uniqueImages.git"
   },
+  "scripts": {
+    "test": "ava"
+  },
   "devDependencies": {
+    "ava": "^1.4.1",
     "eslint-config-defaults": "^9.0.0"
   }
 }
