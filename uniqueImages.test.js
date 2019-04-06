@@ -4,14 +4,16 @@ const uniqueImages = require('./uniqueImages.js');
 
 test('groupBySimilarity - groups by strict equality', t => {
     const testTuples = [
-        ['Jan Hus', 'cae905beeea21b00ad2c713c1a001a29'],
-        ['John Wyclif', '166d0ba5c83e68a2c58698242a1060bc'],
-        ['Jan Žižka', '3447458c16ed6bc337d33bddcdd87b2c'],
-        ['Jan Hus', 'cae905beeea21b00ad2c713c1a001a29'],
-        ['Jan Žižka', '3447458c16ed6bc337d33bddcdd87b2c'],
-        ['Jan Žižka', '3447458c16ed6bc337d33bddcdd87b2c'],
+        [
+            ['Jan Hus', 'cae905beeea21b00ad2c713c1a001a29'],
+            ['John Wyclif', '166d0ba5c83e68a2c58698242a1060bc'],
+            ['Jan Žižka', '3447458c16ed6bc337d33bddcdd87b2c'],
+            ['Jan Hus', 'cae905beeea21b00ad2c713c1a001a29'],
+            ['Jan Žižka', '3447458c16ed6bc337d33bddcdd87b2c'],
+            ['Jan Žižka', '3447458c16ed6bc337d33bddcdd87b2c'],
+        ]
     ];
-    const result = uniqueImages.groupBySimilarity(R.equals, testTuples);
+    const result = uniqueImages.groupByEquality(testTuples);
     const expected = [
         [
             ['Jan Hus', 'cae905beeea21b00ad2c713c1a001a29'],
@@ -31,14 +33,16 @@ test('groupBySimilarity - groups by strict equality', t => {
 
 test('groupBySimilarity - groups by hamming distance', t => {
     const testTuples = [
-        ['Jan Hus', 'cae905beeea21b00ad2c713c1a001b39'],
-        ['John Wyclif', '166d0ba5c83e68a2c58698242a1060bc'],
-        ['Jan Žižka', '3447458c16ed6bc337d33bddcdd87b4e'],
-        ['Jan Hus', 'cae905beeea21b00ad2c713c1a001c49'],
-        ['Jan Žižka', '3447458c16ed6bc337d33bddcdd87b3d'],
-        ['Jan Žižka', '3447458c16ed6bc337d33bddcdd87b2c'],
+        [
+            ['Jan Hus', 'cae905beeea21b00ad2c713c1a001b39'],
+            ['John Wyclif', '166d0ba5c83e68a2c58698242a1060bc'],
+            ['Jan Žižka', '3447458c16ed6bc337d33bddcdd87b4e'],
+            ['Jan Hus', 'cae905beeea21b00ad2c713c1a001c49'],
+            ['Jan Žižka', '3447458c16ed6bc337d33bddcdd87b3d'],
+            ['Jan Žižka', '3447458c16ed6bc337d33bddcdd87b2c'],
+        ]
     ];
-    const result = uniqueImages.groupBySimilarity(uniqueImages.hammingDistanceSmallEnough, testTuples);
+    const result = uniqueImages.groupByHammingDistance(testTuples);
     const expected = [
         [
             ['Jan Hus', 'cae905beeea21b00ad2c713c1a001c49'],
