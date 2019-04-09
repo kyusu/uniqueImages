@@ -4,7 +4,7 @@
         {{#each duplicates}}
             <li>
                 {{#each this}}
-                    <div class="wrapper">
+                    <div class="wrapper" data-id="/img{{this.file}}">
                         <div>{{this.fileName}}</div>
                         <div>w: {{this.metaData.width}}, h: {{this.metaData.height}}</div>
                         <div>
@@ -13,7 +13,7 @@
                             </a>
                         </div>
                         <div>
-                            <button data-id="/img{{this.file}}">delete</button>
+                            <button data-url="/img{{this.file}}">delete</button>
                         </div>
                     </div>
                 {{/each}}
@@ -27,7 +27,7 @@
         {{#each potentialDuplicates}}
             <li>
                 {{#each this}}
-                    <div class="wrapper">
+                    <div class="wrapper" data-id="/img{{this.file}}">
                         <div>{{this.fileName}}</div>
                         <div>w: {{this.metaData.width}}, h: {{this.metaData.height}}</div>
                         <div>
@@ -36,7 +36,7 @@
                             </a>
                         </div>
                         <div>
-                            <button data-id="/img{{this.file}}">delete</button>
+                            <button data-url="/img{{this.file}}">delete</button>
                         </div>
                     </div>
                 {{/each}}
