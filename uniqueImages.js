@@ -6,7 +6,7 @@ const path = require('path');
 const Thread = require('child-manager');
 const os = require('os');
 const q = require('q');
-const _ = require('lodash');
+const R = require('ramda');
 
 var results = {};
 const resultDeferred = q.defer();
@@ -26,34 +26,14 @@ const handleThreadOutput = (deferreds, out) => {
 };
 
 /**
- * Compares two strings
- * @param {string} a
- * @param {string} b
- * @returns {number}
- */
-const compareStrings = (a, b) => {
-    var result;
-    if (a < b) {
-        result = 1;
-    } else if (a === b) {
-        result = 0;
-    } else {
-        result = -1;
-    }
-    return result;
-};
-
-/**
  * Compares the hash value of two "tuples"
  * @param {Array.<string>} tupleA
  * @param {Array.<string>} tupleB
  * @returns {number}
  */
-const compareHashes = (tupleA, tupleB) => {
-    const hashA = tupleA[1];
-    const hashB = tupleB[1];
-    return compareStrings(hashA, hashB);
-};
+const compareHashes = R.comparator(([, a], [, b]) => a > b);
+
+const sortByHashes = R.sort(compareHashes);
 
 /**
  * Checks if the hamming distance of the two given hashes is a below a threshold
@@ -67,69 +47,42 @@ const hammingDistanceSmallEnough = (hash1, hash2) => {
 };
 
 /**
- * Determines whether the two given hashes are equal
- * @param {string} hash1
- * @param {string} hash2
- * @returns {boolean}
- */
-const areEqual = (hash1, hash2) => {
-    return hash1 === hash2;
-};
-
-/**
  * Takes an array of sorted "tuples" and groups them by similarity
  * @param {function} predicate A function which acts as a predicate whether two hashes can be considered similar enough
  * to be grouped together
- * @param {Array.<Array.<string>>} tuples
- * @returns {Array.<Array.<string>>}
  */
-const groupBySimilarity = (predicate, tuples) => {
-    var groups = [[]];
-    var groupIndex = 0;
-    tuples.forEach((currentVector, index, array) => {
-        if (index > 0) {
-            var similarEnough = predicate(array[index - 1][1], currentVector[1]);
-            if (similarEnough) {
-                groups[groupIndex].push(currentVector);
-            } else {
-                groups.push([currentVector]);
-                groupIndex++;
-            }
-        } else {
-            groups[groupIndex].push(currentVector);
-        }
-    });
-    return groups;
-};
+const groupBySimilarity = predicate => R.compose(
+    R.groupWith(([, a], [, b]) => predicate(a, b)),
+    sortByHashes,
+    R.unnest
+);
+
+const groupByEquality = groupBySimilarity(R.equals);
+
+const groupByHammingDistance = groupBySimilarity(hammingDistanceSmallEnough);
 
 /**
  * Whether the file extension of the given file is jpg or not
  * @param {string} fileName
  * @returns {boolean}
  */
-const isJPG = (fileName) => {
-    return path.extname(fileName) === '.jpg';
-};
+const isJPG = (fileName) => path.extname(fileName) === '.jpg';
 
 /**
  * Splits up the given array into an array which holds n arrays
  * @param {Array.<*>} array
- * @param chunks
+ * @param {number} chunks
  * @returns {Array.<Array.<*>>}
  */
 const splitUpIntoChunks = (array, chunks) => {
     const size = Math.ceil(array.length / chunks);
-    var splitUp = [];
-    for (var i = 0; i < array.length; i += size) {
-        splitUp.push(array.slice(i, i + size));
-    }
     console.log('Array length:', array.length, 'chunk size:', size, 'chunks:', chunks);
-    return splitUp;
+    return R.splitEvery(size, array);
 };
 
 /**
- * Calculates the hashes for the given jpgs and spreads the workload to the given thread object
- * @param {Array.<string>} jpgs
+ * Calculates the hashes for the given JPGs and spreads the workload to the given thread object
+ * @param {Array.<string>} JPGs
  * @param {{thread: Thread, deferred: Array, promises: Array, deferred: Array, handleResolved: function}} hashObj
  */
 const calculateHashes = (jpgs, hashObj) => {
@@ -141,18 +94,6 @@ const calculateHashes = (jpgs, hashObj) => {
         hashObj.promises.push(deferred.promise);
     });
     q.all(hashObj.promises).then(hashObj.handleResolved.bind(undefined, hashObj)).done();
-};
-
-/**
- * Sorts and groups the given array
- * @param {Function} groupingPredicate The predicate function which is used to group the entries
- * @param {Array.<Array.<string>>} array An array which holds "tuples" of file name/path and hash
- * @returns {Array.<Array.<string>>}
- */
-const getGroupedTuples = (groupingPredicate, array) => {
-    const hashes = [].concat.apply([], array);
-    const sortedTuples = hashes.sort(compareHashes);
-    return groupBySimilarity(groupingPredicate, sortedTuples);
 };
 
 /**
@@ -183,8 +124,8 @@ const getGroupsWithMultipleEntries = (mapFunc, groups) => {
  */
 const handleMd5PromisesResolved = (md5Obj, array) => {
     md5Obj.thread.close();
-    const grouped = getGroupedTuples(areEqual, array);
-    const groups = grouped.map(group => group.map(tuple =>tuple[0]).sort());
+    const grouped = groupByEquality(array);
+    const groups = grouped.map(group => group.map(tuple => tuple[0]).sort());
     results.duplicates = getGroupsWithMultipleEntries(file => file, groups);
     calculateHashes(groups.map(group => group[0]), md5Obj.pHash);
 };
@@ -197,10 +138,10 @@ const handleMd5PromisesResolved = (md5Obj, array) => {
  */
 const handlePHashPromisesResolved = (pHashObj, array) => {
     pHashObj.thread.close();
-    const grouped = getGroupedTuples(hammingDistanceSmallEnough, array);
+    const grouped = groupByHammingDistance(array);
     results.potentialDuplicates = getGroupsWithMultipleEntries(tuple => tuple[0], grouped);
     console.timeEnd('Hashing');
-    const errors = getErrors(_.flatten(array));
+    const errors = getErrors(R.unnest(array));
     if (errors.length) {
         results.brokenFiles = errors;
     }
@@ -231,8 +172,15 @@ const handleReadDirectory =  (error, dirs, files) => {
     }
 };
 
-exports.findDuplicates = (dirName) => {
+const findDuplicates = (dirName) => {
     const rootDir = path.resolve(dirName);
     recursive.readdirr(rootDir, handleReadDirectory);
     return resultDeferred.promise;
+};
+
+module.exports = {
+    findDuplicates,
+    groupByEquality,
+    groupByHammingDistance,
+    splitUpIntoChunks
 };
