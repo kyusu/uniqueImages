@@ -6,6 +6,7 @@ const path = require('path');
 const sizeOf = require('image-size');
 const readChunk = require('read-chunk');
 const imageType = require('image-type');
+const R = require('ramda');
 
 const getMetaData = (file) => {
     try {
@@ -28,16 +29,11 @@ const getMetaData = (file) => {
     }
 };
 
-const augmentImage = tuple => {
-    return tuple.map(file => {
-        return {
-            file: file,
-            metaData: getMetaData(file),
-            fileName: path.basename(file)
-        };
-    });
-
-};
+const augmentImage = R.map(file => ({
+    file: file,
+    metaData: getMetaData(file),
+    fileName: path.basename(file)
+}));
 
 const handleDuplicates = (results) => {
     const augmentedDuplicates = results.duplicates.map(augmentImage);
