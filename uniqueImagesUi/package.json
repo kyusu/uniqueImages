@@ -8,5 +8,11 @@
     "express": "^4.16.4",
     "hbs": "^4.1.0",
     "morgan": "^1.9.1"
-  }
+    "snyk": "^1.189.0"
+  },
+  "scripts": {
+    "snyk-protect": "snyk protect",
+    "prepare": "npm run snyk-protect"
+  },
+  "snyk": true
 }
