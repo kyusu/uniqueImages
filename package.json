@@ -16,7 +16,7 @@
     "recursive-fs": "^0.1.4",
     "to-arraybuffer": "^1.0.1"
   },
-  "description": "Calculates the perceptual image hash of all JPG images in the given directory based on algorithm described in Block Mean Value",
+  "description": "Calculates the perceptual image hash of all JPG images in the given directory based on the algorithm described in Block Mean Value",
   "author": "kyusu",
   "repository": {
     "type": "git",
