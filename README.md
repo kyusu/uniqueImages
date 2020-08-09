@@ -4,6 +4,7 @@ uniqueImages
 [![dependencies Status](https://david-dm.org/kyusu/uniqueImages/status.svg)](https://david-dm.org/kyusu/uniqueImages)
 [![Maintainability](https://api.codeclimate.com/v1/badges/a136817bd50bf9e58a57/maintainability)](https://codeclimate.com/github/kyusu/uniqueImages/maintainability)
 [![Known Vulnerabilities](https://snyk.io/test/github/kyusu/uniqueImages/badge.svg?targetFile=package.json)](https://snyk.io/test/github/kyusu/uniqueImages?targetFile=package.json)
+[![DeepScan grade](https://deepscan.io/api/teams/10488/projects/13338/branches/220804/badge/grade.svg)](https://deepscan.io/dashboard#view=project&tid=10488&pid=13338&bid=220804)
 
 
 A node command line tool which can be used to find duplicate images in a directory even if the images differ in
