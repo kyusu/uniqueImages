@@ -8,7 +8,7 @@
     "express": "^4.16.4",
     "hbs": "^4.1.1",
     "morgan": "^1.9.1",
-    "snyk": "^1.425.4"
+    "snyk": "^1.465.0"
   },
   "scripts": {
     "snyk-protect": "snyk protect",
